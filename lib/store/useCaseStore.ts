@@ -46,7 +46,15 @@ export interface CaseStoreState {
   comparisonMode: boolean;
   mathParametersHypothesisB: MathParameters;
 
+  // Swiss Dashboard & Version State
+  selectedVersion: string;
+  isSettingsOpen: boolean;
+  mapTheme: 'voyager' | 'dark';
+
   // Actions
+  setSelectedVersion: (version: string) => void;
+  setIsSettingsOpen: (open: boolean) => void;
+  setMapTheme: (theme: 'voyager' | 'dark') => void;
   setActiveCase: (caseId: string) => void;
   addCase: (newCase: CaseData) => void;
   setCurrentTimeIso: (iso: string) => void;
@@ -104,7 +112,7 @@ export const useCaseStore = create<CaseStoreState>((set) => ({
   selectedPOIId: null,
 
   comparisonMode: false,
-  mathParametersHypothesisB: {
+    mathParametersHypothesisB: {
     bufferMeters: 500,
     decayExponent: 1.8,
     anchorWeights: {
@@ -115,6 +123,14 @@ export const useCaseStore = create<CaseStoreState>((set) => ({
       'anchor-samuel-home': 0.7,
     },
   },
+
+  selectedVersion: 'all',
+  isSettingsOpen: false,
+  mapTheme: 'voyager',
+
+  setSelectedVersion: (version) => set({ selectedVersion: version }),
+  setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),
+  setMapTheme: (theme) => set({ mapTheme: theme }),
 
   setActiveCase: (caseId) =>
     set((state) => {

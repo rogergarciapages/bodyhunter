@@ -28,6 +28,7 @@ export interface TimelineEvent {
   locationRefId?: string;
   locationRef?: AnchorPoint;
   sourceRef?: string;
+  versionId?: string;
 }
 
 export interface PointOfInterest {
@@ -39,6 +40,7 @@ export interface PointOfInterest {
   lng: number;
   notes?: string;
   sourceRef?: string;
+  versionId?: string;
 }
 
 export interface TransportProfile {

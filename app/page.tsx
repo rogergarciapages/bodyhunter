@@ -1,103 +1,133 @@
 'use client';
 
 import React from 'react';
-import MapView from '../components/MapView';
-import Timeline from '../components/Timeline';
-import LayerControlPanel from '../components/LayerControlPanel';
-import TransportRadiusPanel from '../components/TransportRadiusPanel';
-import MetricsPanel from '../components/MetricsPanel';
-import SensitivitySlider from '../components/SensitivitySlider';
-import EventDetailDrawer from '../components/EventDetailDrawer';
-import EthicalBanner from '../components/EthicalBanner';
-import CaseManagerModal from '../components/CaseManagerModal';
-import HypothesisComparison from '../components/HypothesisComparison';
+import dynamic from 'next/dynamic';
+import VersionSelector from '../components/VersionSelector';
+import SwissTransportControl from '../components/SwissTransportControl';
+import TestimoniesPanel from '../components/TestimoniesPanel';
+import AdvancedSettingsModal from '../components/AdvancedSettingsModal';
 import { useCaseStore } from '../lib/store/useCaseStore';
-import { Radar, ShieldAlert, Crosshair, Map, Activity } from 'lucide-react';
+import { SlidersHorizontal, MapPin, Compass } from 'lucide-react';
+
+const MapView = dynamic(() => import('../components/MapView'), {
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full min-h-[500px] bg-zinc-50 flex flex-col items-center justify-center text-zinc-400 font-sans text-xs space-y-2">
+      <div className="w-6 h-6 border-2 border-zinc-800 border-t-transparent rounded-full animate-spin"></div>
+      <p className="font-medium text-zinc-600">Cargando cartografía suiza...</p>
+    </div>
+  ),
+});
 
 export default function DashboardPage() {
+  const setIsSettingsOpen = useCaseStore((state) => state.setIsSettingsOpen);
   const activeCase = useCaseStore((state) => state.activeCase);
-  const comparisonMode = useCaseStore((state) => state.comparisonMode);
+  const selectedMinutes = useCaseStore((state) => state.selectedMinutes);
+  const selectedTransportProfileId = useCaseStore((state) => state.selectedTransportProfileId);
+
+  const activeProfile =
+    activeCase.transportProfiles.find((p) => p.id === selectedTransportProfileId) ||
+    activeCase.transportProfiles[0];
+
+  const approxRadiusKm = Math.round(((activeProfile.speedKmh * (selectedMinutes / 60)) / 1.35) * 10) / 10;
+  const approxAreaKm2 = Math.round(Math.PI * Math.pow(approxRadiusKm, 2));
 
   return (
-    <div className="min-h-screen bg-[#070b12] text-slate-100 flex flex-col font-sans selection:bg-blue-500 selection:text-white">
-      {/* Top Methodological Scope & Ethical Disclaimer Banner */}
-      <EthicalBanner />
-
-      {/* Top Operational Bar */}
-      <header className="border-b border-slate-800 bg-slate-950/80 backdrop-blur-md px-6 py-3.5 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-30">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-blue-600/20 border border-blue-500/50 flex items-center justify-center text-blue-400 shadow-lg shadow-blue-500/10">
-            <Radar className="w-5 h-5 animate-radar" />
-          </div>
-          <div>
-            <h1 className="font-bold text-base tracking-wide text-slate-100 flex items-center gap-2">
-              Cold Case Geo-Dashboard <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-950 text-blue-400 border border-blue-800 uppercase">v1.0 MVP</span>
-            </h1>
-            <p className="text-xs text-slate-400 font-mono">
-              Análisis geoespacial de espacio de decisión y perfilado geográfico (Modelo Rossmo)
-            </p>
-          </div>
-        </div>
-
-        {/* Quick Stats & Case Switcher */}
-        <div className="flex items-center gap-3">
-          <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 font-mono text-xs text-slate-400">
-            <Activity className="w-3.5 h-3.5 text-emerald-400" />
-            <span>{activeCase.anchorPoints.length} Anclas</span>
-            <span className="text-slate-600">|</span>
-            <span>{activeCase.timelineEvents.length} Eventos</span>
+    <div className="min-h-screen bg-[#f8fafc] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
+      {/* 1. Header Minimalista Suizo */}
+      <header className="border-b border-zinc-200/90 bg-white sticky top-0 z-30 px-6 py-3.5">
+        <div className="max-w-[1800px] mx-auto flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 bg-rose-600 rounded-full inline-block"></span>
+                <h1 className="font-bold text-sm tracking-tight text-zinc-900 uppercase">
+                  MARTA DEL CASTILLO
+                </h1>
+                <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
+                  SEVILLA · 2009
+                </span>
+              </div>
+              <p className="text-xs text-zinc-500 mt-0.5">
+                Espacio de movilidad criminal, radios de desplazamiento e hipótesis testimoniales
+              </p>
+            </div>
           </div>
 
-          <CaseManagerModal />
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 hover:text-zinc-900 text-xs font-medium transition shadow-xs"
+            >
+              <SlidersHorizontal className="w-3.5 h-3.5" />
+              <span>Ajustes y Ponderaciones</span>
+            </button>
+          </div>
         </div>
       </header>
 
-      {/* Main Dashboard Layout */}
-      <main className="flex-1 p-4 md:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 max-w-[1920px] mx-auto w-full">
-        {/* Left Column (65% width on desktop) - Map & Timeline */}
-        <div className="lg:col-span-8 flex flex-col gap-5">
-          {/* Comparison Mode or Single Map Container */}
-          {comparisonMode ? (
-            <HypothesisComparison />
-          ) : (
-            <div className="flex-1 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-mono text-xs text-slate-400">
-                  <Crosshair className="w-4 h-4 text-blue-400" />
-                  <span>Visor Espacial Interactivo (MapLibre / Leaflet GL)</span>
-                </div>
-                <HypothesisComparison />
-              </div>
+      {/* 2. Área de Controles Esenciales y Mapa */}
+      <main className="flex-1 max-w-[1800px] mx-auto w-full p-4 sm:p-6 space-y-4">
+        {/* Barra superior de controles esenciales (Pocas opciones, máxima claridad) */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          {/* Selector de Versiones y Testimonios */}
+          <div className="flex-1">
+            <VersionSelector />
+          </div>
 
-              {/* Interactive Map Component */}
-              <div className="relative w-full h-[520px] rounded-2xl overflow-hidden border border-slate-800 shadow-2xl">
-                <MapView />
-              </div>
-
-              {/* Time Sensitivity Slider ( shift crime time ±30 min ) */}
-              <SensitivitySlider />
-            </div>
-          )}
-
-          {/* Interactive Timeline Bar */}
-          <Timeline />
+          {/* Selector de Transporte y Tiempos */}
+          <div>
+            <SwissTransportControl />
+          </div>
         </div>
 
-        {/* Right Sidebar (35% width on desktop) - Controls & Math Analytics */}
-        <div className="lg:col-span-4 flex flex-col gap-5">
-          {/* Layer Control Panel & Rossmo Math Parameters */}
-          <LayerControlPanel />
+        {/* Grilla Principal del Dashboard */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
+          {/* Columna Izquierda: Mapa Principal (Protagonista 70%) */}
+          <div className="lg:col-span-8 flex flex-col gap-2">
+            <div className="relative w-full h-[620px] rounded-2xl overflow-hidden border border-zinc-200 bg-white shadow-xs">
+              <MapView />
+            </div>
 
-          {/* Transport Profiles & Isochrones Selector */}
-          <TransportRadiusPanel />
+            {/* Ficha técnica mínima al pie del mapa */}
+            <div className="flex flex-wrap items-center justify-between px-2 text-[11px] text-zinc-500 font-mono">
+              <div className="flex items-center gap-3">
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-zinc-400" /> Origen: León XIII, Sevilla
+                </span>
+                <span>•</span>
+                <span>Ventana judicial: 21:00h – 22:15h</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span>Radio teórico: ~{approxRadiusKm} km</span>
+                <span>•</span>
+                <span>Cobertura: ~{approxAreaKm2} km²</span>
+              </div>
+            </div>
+          </div>
 
-          {/* Recharts Analytics & Hot Zones Ranking Leaderboard */}
-          <MetricsPanel />
+          {/* Columna Derecha: Testimonios y Cronología (30%) */}
+          <div className="lg:col-span-4 bg-white border border-zinc-200 rounded-2xl p-4 shadow-xs space-y-4">
+            <TestimoniesPanel />
+
+            {/* Resumen Forense Rápido */}
+            <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-150 space-y-1.5 text-xs">
+              <div className="flex items-center gap-1.5 font-semibold text-zinc-800 text-[11px] uppercase tracking-wider">
+                <Compass className="w-3.5 h-3.5 text-zinc-600" />
+                Resumen de Movilidad ({activeProfile.label})
+              </div>
+              <p className="text-zinc-600 leading-relaxed text-[11px]">
+                En un intervalo de <strong>{selectedMinutes} minutos</strong> a una velocidad media estimada de{' '}
+                <strong>{activeProfile.speedKmh} km/h</strong>, el radio alcanzable desde el núcleo de la Macarena es de hasta{' '}
+                <strong>~{approxRadiusKm} km</strong>, abarcando una superficie de <strong>~{approxAreaKm2} km²</strong> sobre la red viaria metropolitana.
+              </p>
+            </div>
+          </div>
         </div>
       </main>
 
-      {/* Event Detail Drawer Overlay */}
-      <EventDetailDrawer />
+      {/* 3. Modal de Ajustes Avanzados */}
+      <AdvancedSettingsModal />
     </div>
   );
 }
