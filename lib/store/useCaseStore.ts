@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { MARTA_DEL_CASTILLO_CASE } from '../seed/martaDelCastillo';
 import { AnchorPoint, CaseData, PointOfInterest, TimelineEvent, TransportMode } from '../types/case';
+import { ItineraryWaypoint, PresetItinerary } from '../types/itinerary';
+import { ORIGIN_LEON_XIII, PRESET_ITINERARIES } from '../data/itinerariesData';
 
 export interface LayerVisibility {
   anchors: boolean;
@@ -51,7 +53,19 @@ export interface CaseStoreState {
   isSettingsOpen: boolean;
   mapTheme: 'voyager' | 'dark';
 
+  // Itinerary Waypoint Engine
+  activeWaypoints: ItineraryWaypoint[];
+  activeItineraryId: string | 'custom';
+  finalSearchRadiusMeters: number;
+  itineraryTransportMode: 'WALKING' | 'MOTORCYCLE' | 'CAR';
+
   // Actions
+  selectPresetItinerary: (itineraryId: string) => void;
+  resetToOrigin: () => void;
+  addWaypoint: (waypoint: ItineraryWaypoint) => void;
+  removeWaypoint: (waypointId: string) => void;
+  setFinalSearchRadiusMeters: (radius: number) => void;
+  setItineraryTransportMode: (mode: 'WALKING' | 'MOTORCYCLE' | 'CAR') => void;
   setSelectedVersion: (version: string) => void;
   setIsSettingsOpen: (open: boolean) => void;
   setMapTheme: (theme: 'voyager' | 'dark') => void;
@@ -127,6 +141,61 @@ export const useCaseStore = create<CaseStoreState>((set) => ({
   selectedVersion: 'all',
   isSettingsOpen: false,
   mapTheme: 'voyager',
+
+  // Itinerary starts with ONLY ONE marker: Calle León XIII
+  activeWaypoints: [ORIGIN_LEON_XIII],
+  activeItineraryId: 'custom',
+  finalSearchRadiusMeters: 800,
+  itineraryTransportMode: 'MOTORCYCLE',
+
+  selectPresetItinerary: (itineraryId) => {
+    const found = PRESET_ITINERARIES.find((p) => p.id === itineraryId);
+    if (found) {
+      set({
+        activeItineraryId: found.id,
+        activeWaypoints: [...found.waypoints],
+        finalSearchRadiusMeters: found.finalSearchRadiusMeters,
+        itineraryTransportMode: found.transportMode,
+      });
+    }
+  },
+
+  resetToOrigin: () =>
+    set({
+      activeItineraryId: 'custom',
+      activeWaypoints: [ORIGIN_LEON_XIII],
+      finalSearchRadiusMeters: 800,
+    }),
+
+  addWaypoint: (waypoint) =>
+    set((state) => {
+      // Avoid duplicate waypoints
+      if (state.activeWaypoints.some((w) => w.id === waypoint.id)) {
+        return state;
+      }
+      const newOrder = state.activeWaypoints.length + 1;
+      const updated = [...state.activeWaypoints, { ...waypoint, order: newOrder }];
+      return {
+        activeItineraryId: 'custom',
+        activeWaypoints: updated,
+      };
+    }),
+
+  removeWaypoint: (waypointId) =>
+    set((state) => {
+      // Do not allow deleting the origin point (León XIII)
+      if (waypointId === ORIGIN_LEON_XIII.id) return state;
+      const filtered = state.activeWaypoints
+        .filter((w) => w.id !== waypointId)
+        .map((w, idx) => ({ ...w, order: idx + 1 }));
+      return {
+        activeItineraryId: 'custom',
+        activeWaypoints: filtered,
+      };
+    }),
+
+  setFinalSearchRadiusMeters: (radius) => set({ finalSearchRadiusMeters: radius }),
+  setItineraryTransportMode: (mode) => set({ itineraryTransportMode: mode }),
 
   setSelectedVersion: (version) => set({ selectedVersion: version }),
   setIsSettingsOpen: (open) => set({ isSettingsOpen: open }),

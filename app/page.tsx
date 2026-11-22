@@ -2,17 +2,15 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
-import VersionSelector from '../components/VersionSelector';
-import SwissTransportControl from '../components/SwissTransportControl';
-import TestimoniesPanel from '../components/TestimoniesPanel';
+import ItineraryBuilder from '../components/ItineraryBuilder';
 import AdvancedSettingsModal from '../components/AdvancedSettingsModal';
 import { useCaseStore } from '../lib/store/useCaseStore';
-import { SlidersHorizontal, MapPin, Compass } from 'lucide-react';
+import { SlidersHorizontal, MapPin, Route, RotateCcw } from 'lucide-react';
 
 const MapView = dynamic(() => import('../components/MapView'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[500px] bg-zinc-50 flex flex-col items-center justify-center text-zinc-400 font-sans text-xs space-y-2">
+    <div className="w-full h-full min-h-[520px] bg-zinc-50 flex flex-col items-center justify-center text-zinc-400 font-sans text-xs space-y-2">
       <div className="w-6 h-6 border-2 border-zinc-800 border-t-transparent rounded-full animate-spin"></div>
       <p className="font-medium text-zinc-600">Cargando cartografía suiza...</p>
     </div>
@@ -21,16 +19,11 @@ const MapView = dynamic(() => import('../components/MapView'), {
 
 export default function DashboardPage() {
   const setIsSettingsOpen = useCaseStore((state) => state.setIsSettingsOpen);
-  const activeCase = useCaseStore((state) => state.activeCase);
-  const selectedMinutes = useCaseStore((state) => state.selectedMinutes);
-  const selectedTransportProfileId = useCaseStore((state) => state.selectedTransportProfileId);
+  const activeWaypoints = useCaseStore((state) => state.activeWaypoints);
+  const resetToOrigin = useCaseStore((state) => state.resetToOrigin);
+  const finalSearchRadiusMeters = useCaseStore((state) => state.finalSearchRadiusMeters);
 
-  const activeProfile =
-    activeCase.transportProfiles.find((p) => p.id === selectedTransportProfileId) ||
-    activeCase.transportProfiles[0];
-
-  const approxRadiusKm = Math.round(((activeProfile.speedKmh * (selectedMinutes / 60)) / 1.35) * 10) / 10;
-  const approxAreaKm2 = Math.round(Math.PI * Math.pow(approxRadiusKm, 2));
+  const isInitialState = activeWaypoints.length === 1;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-zinc-900 flex flex-col font-sans selection:bg-zinc-900 selection:text-white">
@@ -45,47 +38,47 @@ export default function DashboardPage() {
                   MARTA DEL CASTILLO
                 </h1>
                 <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
-                  SEVILLA · 2009
+                  ITINERARIOS Y HECHOS PROBADOS
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Espacio de movilidad criminal, radios de desplazamiento e hipótesis testimoniales
+                Simulador de rutas espacio-temporales desde León XIII (a pie / en moto) y determinación de radio final
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
+            {isInitialState ? (
+              <span className="text-[11px] font-mono px-2.5 py-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200 font-medium">
+                Punto inicial: 1 solo marcador
+              </span>
+            ) : (
+              <button
+                onClick={resetToOrigin}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-600 text-xs font-medium transition"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>Reiniciar a León XIII</span>
+              </button>
+            )}
+
             <button
               onClick={() => setIsSettingsOpen(true)}
               className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-zinc-200 bg-white hover:bg-zinc-50 text-zinc-700 hover:text-zinc-900 text-xs font-medium transition shadow-xs"
             >
               <SlidersHorizontal className="w-3.5 h-3.5" />
-              <span>Ajustes y Ponderaciones</span>
+              <span>Ajustes Avanzados</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* 2. Área de Controles Esenciales y Mapa */}
-      <main className="flex-1 max-w-[1800px] mx-auto w-full p-4 sm:p-6 space-y-4">
-        {/* Barra superior de controles esenciales (Pocas opciones, máxima claridad) */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-          {/* Selector de Versiones y Testimonios */}
-          <div className="flex-1">
-            <VersionSelector />
-          </div>
-
-          {/* Selector de Transporte y Tiempos */}
-          <div>
-            <SwissTransportControl />
-          </div>
-        </div>
-
-        {/* Grilla Principal del Dashboard */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-          {/* Columna Izquierda: Mapa Principal (Protagonista 70%) */}
-          <div className="lg:col-span-8 flex flex-col gap-2">
-            <div className="relative w-full h-[620px] rounded-2xl overflow-hidden border border-zinc-200 bg-white shadow-xs">
+      {/* 2. Cuerpo Principal */}
+      <main className="flex-1 max-w-[1800px] mx-auto w-full p-4 sm:p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Columna Izquierda: Mapa Principal (62% ancho en desktop) */}
+          <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-2">
+            <div className="relative w-full h-[660px] rounded-2xl overflow-hidden border border-zinc-200 bg-white shadow-xs">
               <MapView />
             </div>
 
@@ -93,40 +86,38 @@ export default function DashboardPage() {
             <div className="flex flex-wrap items-center justify-between px-2 text-[11px] text-zinc-500 font-mono">
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-zinc-400" /> Origen: León XIII, Sevilla
+                  <MapPin className="w-3 h-3 text-rose-600" />
+                  <strong>Origen fijo:</strong> Piso C/ León XIII, Bajo C (20:28h)
                 </span>
                 <span>•</span>
-                <span>Ventana judicial: 21:00h – 22:15h</span>
+                <span>
+                  Hitos activos: <strong>{activeWaypoints.length}</strong>
+                </span>
               </div>
-              <div className="flex items-center gap-3">
-                <span>Radio teórico: ~{approxRadiusKm} km</span>
-                <span>•</span>
-                <span>Cobertura: ~{approxAreaKm2} km²</span>
+              <div>
+                <span>
+                  Radio final destino: <strong>{finalSearchRadiusMeters} m</strong> (
+                  {(Math.PI * Math.pow(finalSearchRadiusMeters / 1000, 2)).toFixed(2)} km²)
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Columna Derecha: Testimonios y Cronología (30%) */}
-          <div className="lg:col-span-4 bg-white border border-zinc-200 rounded-2xl p-4 shadow-xs space-y-4">
-            <TestimoniesPanel />
-
-            {/* Resumen Forense Rápido */}
-            <div className="p-3 rounded-xl bg-zinc-50 border border-zinc-150 space-y-1.5 text-xs">
-              <div className="flex items-center gap-1.5 font-semibold text-zinc-800 text-[11px] uppercase tracking-wider">
-                <Compass className="w-3.5 h-3.5 text-zinc-600" />
-                Resumen de Movilidad ({activeProfile.label})
-              </div>
-              <p className="text-zinc-600 leading-relaxed text-[11px]">
-                En un intervalo de <strong>{selectedMinutes} minutos</strong> a una velocidad media estimada de{' '}
-                <strong>{activeProfile.speedKmh} km/h</strong>, el radio alcanzable desde el núcleo de la Macarena es de hasta{' '}
-                <strong>~{approxRadiusKm} km</strong>, abarcando una superficie de <strong>~{approxAreaKm2} km²</strong> sobre la red viaria metropolitana.
-              </p>
+          {/* Columna Derecha: Constructor y Selector de Itinerarios (38% ancho) */}
+          <div className="lg:col-span-5 xl:col-span-4 bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-4 max-h-[700px] overflow-y-auto">
+            <div className="flex items-center gap-2 border-b border-zinc-150 pb-3">
+              <Route className="w-4 h-4 text-zinc-800" />
+              <h2 className="font-bold text-xs tracking-tight text-zinc-900 uppercase">
+                Constructor de Itinerario & Testimonios
+              </h2>
             </div>
+
+            <ItineraryBuilder />
           </div>
         </div>
       </main>
 
-      {/* 3. Modal de Ajustes Avanzados */}
+      {/* 3. Modal de Ajustes */}
       <AdvancedSettingsModal />
     </div>
   );
