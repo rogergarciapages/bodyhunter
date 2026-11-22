@@ -3,6 +3,7 @@ import { MARTA_DEL_CASTILLO_CASE } from '../seed/martaDelCastillo';
 import { AnchorPoint, CaseData, PointOfInterest, TimelineEvent, TransportMode } from '../types/case';
 import { ItineraryWaypoint, PresetItinerary } from '../types/itinerary';
 import { ORIGIN_LEON_XIII, PRESET_ITINERARIES } from '../data/itinerariesData';
+import { SuspectId } from '../types/telecom';
 
 export interface LayerVisibility {
   anchors: boolean;
@@ -59,7 +60,15 @@ export interface CaseStoreState {
   finalSearchRadiusMeters: number;
   itineraryTransportMode: 'WALKING' | 'MOTORCYCLE' | 'CAR';
 
+  // Telecom & Mobile Pings Overlay
+  showCellTowers: boolean;
+  selectedSuspect: SuspectId;
+  activeTimelineHour: string;
+
   // Actions
+  toggleCellTowers: () => void;
+  setSelectedSuspect: (suspect: SuspectId) => void;
+  setActiveTimelineHour: (hour: string) => void;
   selectPresetItinerary: (itineraryId: string) => void;
   resetToOrigin: () => void;
   addWaypoint: (waypoint: ItineraryWaypoint) => void;
@@ -142,7 +151,14 @@ export const useCaseStore = create<CaseStoreState>((set) => ({
   isSettingsOpen: false,
   mapTheme: 'voyager',
 
-  // Itinerary starts with ONLY ONE marker: Calle León XIII
+  // Telecom & Mobile Pings Overlay
+  showCellTowers: true,
+  selectedSuspect: 'all',
+  activeTimelineHour: 'all',
+
+  toggleCellTowers: () => set((state) => ({ showCellTowers: !state.showCellTowers })),
+  setSelectedSuspect: (suspect) => set({ selectedSuspect: suspect }),
+  setActiveTimelineHour: (hour) => set({ activeTimelineHour: hour }),
   activeWaypoints: [ORIGIN_LEON_XIII],
   activeItineraryId: 'custom',
   finalSearchRadiusMeters: 800,

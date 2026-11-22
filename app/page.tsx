@@ -3,16 +3,17 @@
 import React from 'react';
 import dynamic from 'next/dynamic';
 import ItineraryBuilder from '../components/ItineraryBuilder';
+import TelecomGamificationPanel from '../components/TelecomGamificationPanel';
 import AdvancedSettingsModal from '../components/AdvancedSettingsModal';
 import { useCaseStore } from '../lib/store/useCaseStore';
-import { SlidersHorizontal, MapPin, Route, RotateCcw } from 'lucide-react';
+import { SlidersHorizontal, MapPin, Route, RotateCcw, Radio } from 'lucide-react';
 
 const MapView = dynamic(() => import('../components/MapView'), {
   ssr: false,
   loading: () => (
-    <div className="w-full h-full min-h-[520px] bg-zinc-50 flex flex-col items-center justify-center text-zinc-400 font-sans text-xs space-y-2">
+    <div className="w-full h-full min-h-[560px] bg-zinc-50 flex flex-col items-center justify-center text-zinc-400 font-sans text-xs space-y-2">
       <div className="w-6 h-6 border-2 border-zinc-800 border-t-transparent rounded-full animate-spin"></div>
-      <p className="font-medium text-zinc-600">Cargando cartografía suiza...</p>
+      <p className="font-medium text-zinc-600">Cargando cartografía y antenas BTS...</p>
     </div>
   ),
 });
@@ -22,6 +23,7 @@ export default function DashboardPage() {
   const activeWaypoints = useCaseStore((state) => state.activeWaypoints);
   const resetToOrigin = useCaseStore((state) => state.resetToOrigin);
   const finalSearchRadiusMeters = useCaseStore((state) => state.finalSearchRadiusMeters);
+  const showCellTowers = useCaseStore((state) => state.showCellTowers);
 
   const isInitialState = activeWaypoints.length === 1;
 
@@ -38,11 +40,11 @@ export default function DashboardPage() {
                   MARTA DEL CASTILLO
                 </h1>
                 <span className="text-[10px] font-mono font-medium px-2 py-0.5 rounded bg-zinc-100 text-zinc-600 border border-zinc-200">
-                  ITINERARIOS Y HECHOS PROBADOS
+                  INVESTIGACIÓN CELULAR & RUTAS
                 </span>
               </div>
               <p className="text-xs text-zinc-500 mt-0.5">
-                Simulador de rutas espacio-temporales desde León XIII (a pie / en moto) y determinación de radio final
+                Solapamiento de torres de telefonía, registros móviles de sospechosos y trazado concordante desde León XIII
               </p>
             </div>
           </div>
@@ -78,7 +80,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
           {/* Columna Izquierda: Mapa Principal (62% ancho en desktop) */}
           <div className="lg:col-span-7 xl:col-span-8 flex flex-col gap-2">
-            <div className="relative w-full h-[660px] rounded-2xl overflow-hidden border border-zinc-200 bg-white shadow-xs">
+            <div className="relative w-full h-[760px] rounded-2xl overflow-hidden border border-zinc-200 bg-white shadow-xs">
               <MapView />
             </div>
 
@@ -87,11 +89,16 @@ export default function DashboardPage() {
               <div className="flex items-center gap-3">
                 <span className="flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-rose-600" />
-                  <strong>Origen fijo:</strong> Piso C/ León XIII, Bajo C (20:28h)
+                  <strong>Origen:</strong> Piso C/ León XIII, Bajo C (20:28h)
                 </span>
                 <span>•</span>
                 <span>
                   Hitos activos: <strong>{activeWaypoints.length}</strong>
+                </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <Radio className="w-3 h-3 text-zinc-400" />
+                  Capa BTS: {showCellTowers ? 'Activa' : 'Inactiva'}
                 </span>
               </div>
               <div>
@@ -103,16 +110,22 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Columna Derecha: Constructor y Selector de Itinerarios (38% ancho) */}
-          <div className="lg:col-span-5 xl:col-span-4 bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-4 max-h-[700px] overflow-y-auto">
-            <div className="flex items-center gap-2 border-b border-zinc-150 pb-3">
-              <Route className="w-4 h-4 text-zinc-800" />
-              <h2 className="font-bold text-xs tracking-tight text-zinc-900 uppercase">
-                Constructor de Itinerario & Testimonios
-              </h2>
-            </div>
+          {/* Columna Derecha: Telefonía Forense & Constructor de Itinerarios (38% ancho) */}
+          <div className="lg:col-span-5 xl:col-span-4 flex flex-col gap-4">
+            {/* Panel de Gamificación y Validación Celular */}
+            <TelecomGamificationPanel />
 
-            <ItineraryBuilder />
+            {/* Constructor y Selector de Itinerarios */}
+            <div className="bg-white border border-zinc-200 rounded-2xl p-5 shadow-xs space-y-4">
+              <div className="flex items-center gap-2 border-b border-zinc-150 pb-3">
+                <Route className="w-4 h-4 text-zinc-800" />
+                <h2 className="font-bold text-xs tracking-tight text-zinc-900 uppercase">
+                  Constructor de Itinerario & Testimonios
+                </h2>
+              </div>
+
+              <ItineraryBuilder />
+            </div>
           </div>
         </div>
       </main>
