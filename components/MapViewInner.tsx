@@ -153,7 +153,8 @@ export default function MapViewInner({ isHypothesisB = false }: MapViewProps) {
         {/* Dark Tile Layer from CartoDB Dark Matter */}
         <TileLayer
           attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url={`https://{s}.basemaps.cartocdn.com/rastertiles/dark_all/{z}/{x}/{y}.png?key=${process.env.NEXT_PUBLIC_CARTO_API_KEY || 'cb1_5dxr_1_e80dd0a9dc15b563c7d5e61a'}`}
+          subdomains="abcd"
           maxZoom={19}
         />
 
