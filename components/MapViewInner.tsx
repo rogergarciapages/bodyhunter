@@ -1,12 +1,13 @@
 'use client';
 
 import React, { useEffect, useMemo } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, Tooltip, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, Circle, CircleMarker, Tooltip, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useCaseStore } from '../lib/store/useCaseStore';
 import { ORIGIN_LEON_XIII } from '../lib/data/itinerariesData';
 import { ItineraryWaypoint } from '../lib/types/itinerary';
 import { CELL_TOWERS, MOBILE_PINGS } from '../lib/data/telecomData';
+import { runMonteCarloSimulation } from '../lib/geo/monteCarloEngine';
 
 // Auto-bounds adjuster when waypoints change
 function MapBoundsUpdater({ waypoints }: { waypoints: ItineraryWaypoint[] }) {
@@ -82,6 +83,20 @@ const createMobilePingIcon = (color: string) => {
   });
 };
 
+// Monte Carlo Peak Zone Marker icon
+const createPeakZoneIcon = () => {
+  return L.divIcon({
+    className: 'mc-peak-icon',
+    html: `
+      <div class="relative flex items-center justify-center w-7 h-7 rounded-full bg-rose-600 border-2 border-white shadow-lg animate-pulse">
+        <span class="text-[11px] text-white font-bold leading-none">🎯</span>
+      </div>
+    `,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  });
+};
+
 interface MapViewProps {
   isHypothesisB?: boolean;
 }
@@ -89,10 +104,13 @@ interface MapViewProps {
 export default function MapViewInner({ isHypothesisB = false }: MapViewProps) {
   const activeWaypoints = useCaseStore((state) => state.activeWaypoints);
   const finalSearchRadiusMeters = useCaseStore((state) => state.finalSearchRadiusMeters);
+  const itineraryTransportMode = useCaseStore((state) => state.itineraryTransportMode);
   const mapTheme = useCaseStore((state) => state.mapTheme);
   const showCellTowers = useCaseStore((state) => state.showCellTowers);
   const selectedSuspect = useCaseStore((state) => state.selectedSuspect);
   const activeTimelineHour = useCaseStore((state) => state.activeTimelineHour);
+  const enableMonteCarlo = useCaseStore((state) => state.enableMonteCarlo);
+  const monteCarloIterations = useCaseStore((state) => state.monteCarloIterations);
 
   // Fallback to origin if empty
   const waypoints = activeWaypoints.length > 0 ? activeWaypoints : [ORIGIN_LEON_XIII];
@@ -122,6 +140,17 @@ export default function MapViewInner({ isHypothesisB = false }: MapViewProps) {
   const polylineCoords = useMemo(() => {
     return waypoints.map((w) => [w.lat, w.lng] as [number, number]);
   }, [waypoints]);
+
+  // Monte Carlo Calculation
+  const monteCarloResult = useMemo(() => {
+    if (!enableMonteCarlo || !finalWaypoint) return null;
+    return runMonteCarloSimulation(
+      finalWaypoint,
+      finalSearchRadiusMeters,
+      itineraryTransportMode,
+      monteCarloIterations
+    );
+  }, [enableMonteCarlo, finalWaypoint, finalSearchRadiusMeters, itineraryTransportMode, monteCarloIterations]);
 
   const cartoKey = process.env.NEXT_PUBLIC_CARTO_API_KEY || 'cb1_5dxr_1_e80dd0a9dc15b563c7d5e61a';
   const tileUrl =
@@ -210,7 +239,6 @@ export default function MapViewInner({ isHypothesisB = false }: MapViewProps) {
             const tower = towerMap.get(ping.towerId);
             if (!tower) return null;
 
-            // Slight spatial offset around tower center to differentiate multiple pings
             const pingLat = tower.lat + (Math.sin(ping.id.length * 2.3) * 0.0012);
             const pingLng = tower.lng + (Math.cos(ping.id.length * 2.3) * 0.0012);
 
@@ -246,33 +274,109 @@ export default function MapViewInner({ isHypothesisB = false }: MapViewProps) {
           />
         )}
 
-        {/* --- 2. FINAL SEARCH RADIUS AT DESTINATION --- */}
+        {/* --- 2. BASE FINAL SEARCH RADIUS AT DESTINATION --- */}
         {finalWaypoint && (
           <Circle
             center={[finalWaypoint.lat, finalWaypoint.lng]}
             radius={finalSearchRadiusMeters}
             pathOptions={{
-              color: '#e11d48',
-              fillColor: '#e11d48',
-              fillOpacity: 0.16,
-              weight: 2,
+              color: '#09090b',
+              fillColor: '#09090b',
+              fillOpacity: 0.04,
+              weight: 1.5,
               dashArray: '4, 4',
             }}
-          >
-            <Tooltip permanent direction="top" offset={[0, -20]}>
-              <div className="text-[11px] font-sans p-1">
-                <p className="font-bold text-rose-700 uppercase tracking-tight">
-                  Radio Final de Ocultación: {finalSearchRadiusMeters} m
-                </p>
-                <p className="text-zinc-600 font-mono text-[10px]">
-                  Área estimada: {(Math.PI * Math.pow(finalSearchRadiusMeters / 1000, 2)).toFixed(2)} km²
-                </p>
-              </div>
-            </Tooltip>
-          </Circle>
+          />
         )}
 
-        {/* --- 3. ITINERARY WAYPOINT MARKERS --- */}
+        {/* --- 3. MONTE CARLO SIMULATION PROBABILITY LAYERS --- */}
+        {enableMonteCarlo && monteCarloResult && (
+          <>
+            {/* Confidence Rings (P90, P75, P50) */}
+            {monteCarloResult.confidenceRings.map((ring) => (
+              <Circle
+                key={`mc-ring-${ring.percentile}`}
+                center={[monteCarloResult.centerLat, monteCarloResult.centerLng]}
+                radius={ring.radiusMeters}
+                pathOptions={{
+                  color: ring.color,
+                  fillColor: ring.color,
+                  fillOpacity: ring.percentile === 50 ? 0.14 : ring.percentile === 75 ? 0.08 : 0.03,
+                  weight: ring.percentile === 50 ? 2 : 1,
+                  dashArray: ring.percentile === 50 ? undefined : '3, 4',
+                }}
+              >
+                <Tooltip direction="right" offset={[15, 0]}>
+                  <div className="p-1 text-xs font-sans">
+                    <p className="font-bold" style={{ color: ring.color }}>
+                      {ring.label} ({ring.radiusMeters}m)
+                    </p>
+                    <p className="text-[11px] text-zinc-600">{ring.probabilityLabel}</p>
+                  </div>
+                </Tooltip>
+              </Circle>
+            ))}
+
+            {/* Stochastic Particle Cloud */}
+            {monteCarloResult.particles.map((p) => {
+              const particleColor =
+                p.probabilityScore > 70
+                  ? '#e11d48'
+                  : p.probabilityScore > 40
+                  ? '#f59e0b'
+                  : '#3b82f6';
+
+              return (
+                <CircleMarker
+                  key={p.id}
+                  center={[p.lat, p.lng]}
+                  radius={p.probabilityScore > 75 ? 4.5 : 3}
+                  pathOptions={{
+                    fillColor: particleColor,
+                    fillOpacity: p.probabilityScore > 70 ? 0.85 : 0.55,
+                    stroke: p.probabilityScore > 70,
+                    color: '#ffffff',
+                    weight: 1,
+                  }}
+                >
+                  <Tooltip direction="top" offset={[0, -5]}>
+                    <div className="p-1 text-[11px] font-sans">
+                      <p className="font-bold text-zinc-900">
+                        Probabilidad Monte Carlo: {p.probabilityScore}%
+                      </p>
+                      <p className="text-zinc-500 font-mono text-[10px]">
+                        Distancia al destino: {p.distanceMeters} m
+                      </p>
+                    </div>
+                  </Tooltip>
+                </CircleMarker>
+              );
+            })}
+
+            {/* Peak Zone Indicator (Max Probability Cluster) */}
+            <Marker
+              position={[monteCarloResult.peakZone.lat, monteCarloResult.peakZone.lng]}
+              icon={createPeakZoneIcon()}
+            >
+              <Popup>
+                <div className="p-2.5 text-zinc-900 space-y-1">
+                  <span className="font-bold text-xs text-rose-600 block">
+                    🎯 Foco Prioritario Monte Carlo
+                  </span>
+                  <p className="text-xs text-zinc-700">
+                    Mayor densidad estocástica de ocultación estimada:{' '}
+                    <strong>{monteCarloResult.peakZone.probabilityScore}%</strong>
+                  </p>
+                  <p className="text-[10px] text-zinc-500 font-mono">
+                    Lat: {monteCarloResult.peakZone.lat.toFixed(5)}, Lng: {monteCarloResult.peakZone.lng.toFixed(5)}
+                  </p>
+                </div>
+              </Popup>
+            </Marker>
+          </>
+        )}
+
+        {/* --- 4. ITINERARY WAYPOINT MARKERS --- */}
         {waypoints.map((wp, idx) => {
           const isOrigin = idx === 0;
           const isFinal = idx === waypoints.length - 1 && waypoints.length > 1;
@@ -329,20 +433,16 @@ export default function MapViewInner({ isHypothesisB = false }: MapViewProps) {
             </span>
           </div>
         )}
-        {showCellTowers && (
-          <div className="flex items-center gap-3 pt-1 border-t border-zinc-150 text-[10px] text-zinc-500">
-            <span className="flex items-center gap-1">
-              <span>🗼</span> Torres BTS
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-blue-600 inline-block"></span> Carcaño
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-pink-500 inline-block"></span> Marta
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-2 h-2 rounded-full bg-amber-600 inline-block"></span> Samuel
-            </span>
+        {enableMonteCarlo && monteCarloResult && (
+          <div className="pt-1.5 border-t border-zinc-150 space-y-1">
+            <div className="flex items-center gap-2 text-rose-700 font-bold text-[11px]">
+              <span>🎲</span> Simulación Monte Carlo (N={monteCarloResult.iterations})
+            </div>
+            <div className="flex items-center gap-2 text-[10px] text-zinc-600">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-600 inline-block"></span> P50 Núcleo ({monteCarloResult.confidenceRings[0]?.radiusMeters}m)
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span> P75
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block"></span> P90
+            </div>
           </div>
         )}
       </div>

@@ -65,7 +65,13 @@ export interface CaseStoreState {
   selectedSuspect: SuspectId;
   activeTimelineHour: string;
 
+  // Monte Carlo Simulation Engine
+  enableMonteCarlo: boolean;
+  monteCarloIterations: number;
+
   // Actions
+  toggleMonteCarlo: () => void;
+  setMonteCarloIterations: (n: number) => void;
   toggleCellTowers: () => void;
   setSelectedSuspect: (suspect: SuspectId) => void;
   setActiveTimelineHour: (hour: string) => void;
@@ -155,6 +161,13 @@ export const useCaseStore = create<CaseStoreState>((set) => ({
   showCellTowers: true,
   selectedSuspect: 'all',
   activeTimelineHour: 'all',
+
+  // Monte Carlo Simulation Engine
+  enableMonteCarlo: true, // Enabled by default to be immediately visible with a clear checkbox to toggle
+  monteCarloIterations: 320,
+
+  toggleMonteCarlo: () => set((state) => ({ enableMonteCarlo: !state.enableMonteCarlo })),
+  setMonteCarloIterations: (n) => set({ monteCarloIterations: n }),
 
   toggleCellTowers: () => set((state) => ({ showCellTowers: !state.showCellTowers })),
   setSelectedSuspect: (suspect) => set({ selectedSuspect: suspect }),

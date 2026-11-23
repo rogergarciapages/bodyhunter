@@ -24,6 +24,8 @@ export default function DashboardPage() {
   const resetToOrigin = useCaseStore((state) => state.resetToOrigin);
   const finalSearchRadiusMeters = useCaseStore((state) => state.finalSearchRadiusMeters);
   const showCellTowers = useCaseStore((state) => state.showCellTowers);
+  const enableMonteCarlo = useCaseStore((state) => state.enableMonteCarlo);
+  const toggleMonteCarlo = useCaseStore((state) => state.toggleMonteCarlo);
 
   const isInitialState = activeWaypoints.length === 1;
 
@@ -100,10 +102,15 @@ export default function DashboardPage() {
                   <Radio className="w-3 h-3 text-zinc-400" />
                   Capa BTS: {showCellTowers ? 'Activa' : 'Inactiva'}
                 </span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <span>🎲</span>
+                  Monte Carlo: {enableMonteCarlo ? 'Activo (P50/P90)' : 'Inactivo'}
+                </span>
               </div>
-              <div>
+              <div className="flex items-center gap-3">
                 <span>
-                  Radio final destino: <strong>{finalSearchRadiusMeters} m</strong> (
+                  Radio destino: <strong>{finalSearchRadiusMeters} m</strong> (
                   {(Math.PI * Math.pow(finalSearchRadiusMeters / 1000, 2)).toFixed(2)} km²)
                 </span>
               </div>

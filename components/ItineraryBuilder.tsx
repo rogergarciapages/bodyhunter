@@ -13,6 +13,10 @@ export default function ItineraryBuilder() {
   const activeItineraryId = useCaseStore((state) => state.activeItineraryId);
   const finalSearchRadiusMeters = useCaseStore((state) => state.finalSearchRadiusMeters);
   const itineraryTransportMode = useCaseStore((state) => state.itineraryTransportMode);
+  const enableMonteCarlo = useCaseStore((state) => state.enableMonteCarlo);
+  const toggleMonteCarlo = useCaseStore((state) => state.toggleMonteCarlo);
+  const monteCarloIterations = useCaseStore((state) => state.monteCarloIterations);
+  const setMonteCarloIterations = useCaseStore((state) => state.setMonteCarloIterations);
 
   const selectPresetItinerary = useCaseStore((state) => state.selectPresetItinerary);
   const resetToOrigin = useCaseStore((state) => state.resetToOrigin);
@@ -179,6 +183,63 @@ export default function ItineraryBuilder() {
             <span className="text-xs font-bold text-rose-600">{finalAreaKm2} km²</span>
           </div>
         </div>
+      </div>
+
+      {/* 2.5 Checkbox y Control de Simulación Monte Carlo */}
+      <div className="p-3.5 bg-white rounded-xl border border-zinc-200 shadow-xs space-y-2.5">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={enableMonteCarlo}
+              onChange={toggleMonteCarlo}
+              className="w-4 h-4 rounded accent-rose-600 cursor-pointer"
+            />
+            <div>
+              <span className="text-xs font-bold text-zinc-900 block flex items-center gap-1.5">
+                <span>🎲</span> Cálculo Monte Carlo (Lugar Final del Cuerpo)
+              </span>
+              <span className="text-[11px] text-zinc-500 block">
+                Simulación estocástica de dispersión y probabilidades en el destino
+              </span>
+            </div>
+          </label>
+          <span
+            className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+              enableMonteCarlo
+                ? 'bg-rose-50 text-rose-700 border-rose-200'
+                : 'bg-zinc-100 text-zinc-500 border-zinc-200'
+            }`}
+          >
+            {enableMonteCarlo ? 'ACTIVO' : 'INACTIVO'}
+          </span>
+        </div>
+
+        {enableMonteCarlo && (
+          <div className="pt-2 border-t border-zinc-150 flex items-center justify-between text-xs text-zinc-600">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-rose-600"></span>
+              <span className="text-[11px]">
+                Muestreo: <strong>{monteCarloIterations} iteraciones</strong>
+              </span>
+            </div>
+            <div className="flex items-center gap-1">
+              {[200, 320, 500].map((iter) => (
+                <button
+                  key={iter}
+                  onClick={() => setMonteCarloIterations(iter)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium transition ${
+                    monteCarloIterations === iter
+                      ? 'bg-zinc-900 text-white shadow-xs'
+                      : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200'
+                  }`}
+                >
+                  N={iter}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. Cadena de Hitos del Itinerario Activo */}
